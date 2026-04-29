@@ -62,8 +62,8 @@ export const authConfig: NextAuthConfig = {
     signOut: "/login",
     error: "/login",
   },
-  // Skip host verification in production when NEXTAUTH_URL is not set (Coolify)
-  ...(process.env.NEXTAUTH_URL ? {} : { trustHost: true }),
+  // Always trust host in production (Coolify)
+  trustHost: true,
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
