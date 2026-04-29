@@ -200,7 +200,7 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger>
                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>

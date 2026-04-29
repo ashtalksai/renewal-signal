@@ -160,3 +160,9 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type NewSubscription = typeof subscriptions.$inferInsert;
 export type Search = typeof searches.$inferSelect;
 export type NewSearch = typeof searches.$inferInsert;
+
+// Aliases for NextAuth Drizzle adapter
+export const usersTable = users;
+export const accountsTable = accounts;
+export const sessionsTable = sessions;
+export const verificationTokensTable = verificationTokens;

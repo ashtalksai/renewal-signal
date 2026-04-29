@@ -74,8 +74,8 @@ export function FilterPanel({ onFilterChange }: FilterPanelProps) {
     renewalWindow: "all",
   });
 
-  const updateFilter = (key: keyof FilterState, value: string) => {
-    const newFilters = { ...filters, [key]: value };
+  const updateFilter = (key: keyof FilterState, value: string | null) => {
+    const newFilters = { ...filters, [key]: value ?? "all" };
     setFilters(newFilters);
     onFilterChange?.(newFilters);
   };

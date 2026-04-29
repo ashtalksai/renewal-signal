@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -22,6 +21,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -33,6 +33,11 @@ const navItems = [
 
 export function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleNavigate = (href: string) => {
+    router.push(href);
+  };
 
   return (
     <ShadcnSidebar className="border-r border-border">
@@ -44,14 +49,12 @@ export function DashboardSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
-                    asChild
                     isActive={pathname === item.href}
                     className="data-[active=true]:bg-primary/10 data-[active=true]:text-primary"
+                    onClick={() => handleNavigate(item.href)}
                   >
-                    <Link href={item.href} className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -60,16 +63,14 @@ export function DashboardSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="border-t border-border">
-        <form action="/api/auth/signout" method="POST">
-          <Button
-            type="submit"
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground"
-          >
-            <LogOut className="w-4 h-4 mr-3" />
-            Sign Out
-          </Button>
-        </form>
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground"
+          onClick={() => window.location.href = "/api/auth/signout"}
+        >
+          <LogOut className="w-4 h-4 mr-3" />
+          Sign Out
+        </Button>
       </SidebarFooter>
     </ShadcnSidebar>
   );

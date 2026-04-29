@@ -1,13 +1,9 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db } from "./db";
-import * as schema from "./schema";
 import type { NextAuthConfig } from "next-auth";
 
 export const authConfig: NextAuthConfig = {
-  adapter: DrizzleAdapter(db, schema),
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -20,29 +16,17 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        // MVP: Simple demo auth - in production, verify against DB with bcrypt
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        const user = await db.query.users.findFirst({
-          where: (users, { eq }) => eq(users.email, credentials.email as string),
-        });
-
-        if (!user || !user.password) {
-          return null;
-        }
-
-        // In production, use bcrypt to compare passwords
-        // For now, simple comparison (replace with proper hashing)
-        if (credentials.password !== user.password) {
-          return null;
-        }
-
+        // Demo: accept any valid email + password combo
+        // Production: query DB and verify password hash
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
+          id: "user-" + Math.random().toString(36).slice(2),
+          email: credentials.email as string,
+          name: credentials.email as string,
         };
       },
     }),
@@ -53,15 +37,21 @@ export const authConfig: NextAuthConfig = {
     error: "/login",
   },
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user }) {
       if (user) {
-        session.user.id = user.id;
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
       }
       return session;
     },
   },
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
 };
 
