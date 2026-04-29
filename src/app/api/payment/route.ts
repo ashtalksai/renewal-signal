@@ -5,11 +5,14 @@ import { db } from "@/lib/db";
 import { subscriptions } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-04-22.dahlia",
-});
-
 export async function POST(request: NextRequest) {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    return NextResponse.json({ error: 'Stripe not configured' }, { status: 503 });
+  }
+  const stripe = new Stripe(stripeKey, {
+    apiVersion: "2026-04-22.dahlia",
+  });
   try {
     const session = await auth();
     
