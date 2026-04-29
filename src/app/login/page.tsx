@@ -1,11 +1,45 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import { Header } from "@/components/shared/header";
 import { Footer } from "@/components/shared/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    
+    startTransition(async () => {
+      try {
+        const result = await signIn("credentials", {
+          email: formData.get("email"),
+          password: formData.get("password"),
+          redirect: false,
+        });
+
+        if (result?.error) {
+          setError("Invalid email or password");
+        } else {
+          router.push("/dashboard");
+          router.refresh();
+        }
+      } catch {
+        setError("Invalid email or password");
+      }
+    });
+  }
   return (
     <>
       <Header />
@@ -19,16 +53,23 @@ export default function LoginPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 text-sm text-white bg-red-500 rounded-lg">
+                    {error}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium">
                     Email
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="you@company.com"
                     required
+                    disabled={isPending}
                   />
                 </div>
                 <div className="space-y-2">
@@ -37,21 +78,23 @@ export default function LoginPage() {
                   </label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     required
+                    disabled={isPending}
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" className="rounded" />
+                    <input type="checkbox" className="rounded" disabled={isPending} />
                     Remember me
                   </label>
                   <Link href="/forgot-password" className="text-sm text-primary hover:underline">
                     Forgot password?
                   </Link>
                 </div>
-                <Button type="submit" className="w-full">
-                  Sign In
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? "Signing in..." : "Sign In"}
                 </Button>
               </form>
 
@@ -66,7 +109,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full gap-2">
+              <Button variant="outline" className="w-full gap-2" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"

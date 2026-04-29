@@ -1,7 +1,11 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import { compare } from "bcryptjs";
 import type { NextAuthConfig } from "next-auth";
+import { db } from "./db";
+import { users } from "./schema";
+import { eq } from "drizzle-orm";
 
 export const authConfig: NextAuthConfig = {
   providers: [
@@ -16,17 +20,31 @@ export const authConfig: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // MVP: Simple demo auth - in production, verify against DB with bcrypt
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        // Demo: accept any valid email + password combo
-        // Production: query DB and verify password hash
+        // Query database for user
+        const user = await db.query.users.findFirst({
+          where: eq(users.email, credentials.email as string),
+        });
+
+        if (!user || !user.password) {
+          return null;
+        }
+
+        // Verify password with bcrypt
+        const isValid = await compare(credentials.password as string, user.password);
+
+        if (!isValid) {
+          return null;
+        }
+
         return {
-          id: "user-" + Math.random().toString(36).slice(2),
-          email: credentials.email as string,
-          name: credentials.email as string,
+          id: user.id,
+          email: user.email,
+          name: user.name || user.email,
+          image: user.image,
         };
       },
     }),

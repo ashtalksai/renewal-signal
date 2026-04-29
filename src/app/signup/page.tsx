@@ -1,11 +1,40 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import { Header } from "@/components/shared/header";
 import { Footer } from "@/components/shared/footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { signup } from "./actions";
+import { signIn } from "next-auth/react";
 
 export default function SignupPage() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await signup({
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      password: formData.get("password") as string,
+      company: formData.get("company") as string,
+    });
+
+    if (result.error) {
+      setError(result.error);
+    } else if (result.success) {
+      router.push("/dashboard");
+      router.refresh();
+    }
+  }
   return (
     <>
       <Header />
@@ -19,16 +48,23 @@ export default function SignupPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="p-3 text-sm text-white bg-red-500 rounded-lg">
+                    {error}
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label htmlFor="name" className="text-sm font-medium">
                     Full Name
                   </label>
                   <Input
                     id="name"
+                    name="name"
                     type="text"
                     placeholder="John Smith"
                     required
+                    disabled={isPending}
                   />
                 </div>
                 <div className="space-y-2">
@@ -37,9 +73,11 @@ export default function SignupPage() {
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="you@company.com"
                     required
+                    disabled={isPending}
                   />
                 </div>
                 <div className="space-y-2">
@@ -48,9 +86,11 @@ export default function SignupPage() {
                   </label>
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     minLength={8}
                     required
+                    disabled={isPending}
                   />
                   <p className="text-xs text-muted-foreground">
                     Must be at least 8 characters
@@ -62,17 +102,21 @@ export default function SignupPage() {
                   </label>
                   <Input
                     id="company"
+                    name="company"
                     type="text"
                     placeholder="Acme Inc."
                     required
+                    disabled={isPending}
                   />
                 </div>
                 <div className="flex items-start gap-2">
                   <input
                     type="checkbox"
                     id="terms"
+                    name="terms"
                     required
                     className="mt-1 rounded"
+                    disabled={isPending}
                   />
                   <label htmlFor="terms" className="text-sm text-muted-foreground">
                     I agree to the{" "}
@@ -85,8 +129,8 @@ export default function SignupPage() {
                     </Link>
                   </label>
                 </div>
-                <Button type="submit" className="w-full">
-                  Start Free Trial
+                <Button type="submit" className="w-full" disabled={isPending}>
+                  {isPending ? "Creating account..." : "Start Free Trial"}
                 </Button>
               </form>
 
@@ -101,7 +145,7 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              <Button variant="outline" className="w-full gap-2">
+              <Button variant="outline" className="w-full gap-2" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
                     fill="currentColor"

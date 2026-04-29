@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,13 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center space-x-2">
+          <Image
+            src="/logo.png"
+            alt="RenewalIQ"
+            width={40}
+            height={40}
+            className="rounded"
+          />
           <div className="flex items-baseline">
             <span className="text-xl font-semibold text-foreground">Renewal</span>
             <span className="text-xl font-bold text-primary">IQ</span>

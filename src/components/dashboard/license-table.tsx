@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -20,68 +20,67 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, Download, ExternalLink } from "lucide-react";
 import { RenewalTimeline } from "./renewal-timeline";
+import { useRouter } from "next/navigation";
 
-// Mock data for now - will be replaced with real DB data
-const mockLicenses = [
-  {
-    id: "1",
-    name: "John Smith",
-    licenseNumber: "INS-2024-001234",
-    state: "California",
-    profession: "Insurance Agent",
-    status: "active",
-    renewalDate: "2026-08-15",
-    specialty: "Life Insurance",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    licenseNumber: "GC-2023-005678",
-    state: "Texas",
-    profession: "General Contractor",
-    status: "warning",
-    renewalDate: "2026-06-01",
-    specialty: "Residential",
-  },
-  {
-    id: "3",
-    name: "Michael Chen",
-    licenseNumber: "RE-2022-009012",
-    state: "Florida",
-    profession: "Real Estate Agent",
-    status: "critical",
-    renewalDate: "2026-05-10",
-    specialty: "Commercial",
-  },
-  {
-    id: "4",
-    name: "Emily Davis",
-    licenseNumber: "FA-2021-003456",
-    state: "New York",
-    profession: "Financial Advisor",
-    status: "active",
-    renewalDate: "2026-12-20",
-    specialty: "Investment Advisory",
-  },
-  {
-    id: "5",
-    name: "Robert Wilson",
-    licenseNumber: "HC-2020-007890",
-    state: "Illinois",
-    profession: "Healthcare Professional",
-    status: "expired",
-    renewalDate: "2026-03-15",
-    specialty: "Physical Therapy",
-  },
-];
+interface License {
+  id: string;
+  licenseNumber: string;
+  state: string;
+  profession: string;
+  specialty?: string;
+  firstName: string;
+  lastName: string;
+  businessName?: string;
+  status: string;
+  renewalDate: string;
+}
 
 interface LicenseTableProps {
   onExport?: (selectedIds: string[]) => void;
   onViewLicense?: (id: string) => void;
+  searchQuery?: string;
+  filters?: {
+    state?: string;
+    profession?: string;
+    status?: string;
+  };
 }
 
-export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
+export function LicenseTable({ onExport, onViewLicense, searchQuery, filters }: LicenseTableProps) {
+  const router = useRouter();
+  const [licenses, setLicenses] = useState<License[]>([]);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 1, total: 0, totalPages: 0 });
+
+  const fetchLicenses = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", pagination.page.toString());
+      params.set("limit", "20");
+      
+      if (searchQuery) params.set("search", searchQuery);
+      if (filters?.state) params.set("state", filters.state);
+      if (filters?.profession) params.set("profession", filters.profession);
+      if (filters?.status) params.set("status", filters.status);
+
+      const response = await fetch(`/api/licenses?${params.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch licenses");
+      
+      const data = await response.json();
+      setLicenses(data.licenses);
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error("Error fetching licenses:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.page, searchQuery, filters]);
+
+  useEffect(() => {
+    fetchLicenses();
+  }, [fetchLicenses]);
 
   const toggleRowSelection = (id: string) => {
     const newSelected = new Set(selectedRows);
@@ -94,10 +93,10 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
   };
 
   const toggleAllRows = () => {
-    if (selectedRows.size === mockLicenses.length) {
+    if (selectedRows.size === licenses.length) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(mockLicenses.map((l) => l.id)));
+      setSelectedRows(new Set(licenses.map((l) => l.id)));
     }
   };
 
@@ -124,6 +123,16 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
     );
   };
 
+  const handleExport = async (ids: string[]) => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("search", searchQuery);
+    if (filters?.state) params.set("state", filters.state);
+    if (filters?.profession) params.set("profession", filters.profession);
+    if (filters?.status) params.set("status", filters.status);
+    
+    window.open(`/api/export/csv?${params.toString()}`, "_blank");
+  };
+
   return (
     <div className="space-y-4">
       {selectedRows.size > 0 && (
@@ -135,7 +144,7 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onExport?.(Array.from(selectedRows))}
+              onClick={() => handleExport(Array.from(selectedRows))}
               className="gap-2"
             >
               <Download className="w-4 h-4" />
@@ -151,7 +160,7 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
             <TableRow className="border-border">
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedRows.size === mockLicenses.length}
+                  checked={licenses.length > 0 && selectedRows.size === licenses.length}
                   onCheckedChange={toggleAllRows}
                 />
               </TableHead>
@@ -165,60 +174,79 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockLicenses.map((license) => (
-              <TableRow
-                key={license.id}
-                className="border-grid hover:bg-card/50"
-              >
-                <TableCell>
-                  <Checkbox
-                    checked={selectedRows.has(license.id)}
-                    onCheckedChange={() => toggleRowSelection(license.id)}
-                  />
-                </TableCell>
-                <TableCell className="font-medium">{license.name}</TableCell>
-                <TableCell className="font-mono text-sm">
-                  {license.licenseNumber}
-                </TableCell>
-                <TableCell>{license.state}</TableCell>
-                <TableCell>
-                  <div>
-                    <div>{license.profession}</div>
-                    {license.specialty && (
-                      <div className="text-xs text-muted-foreground">
-                        {license.specialty}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{getStatusBadge(license.status)}</TableCell>
-                <TableCell className="w-48">
-                  <RenewalTimeline
-                    renewalDate={license.renewalDate}
-                    showLabel={false}
-                  />
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewLicense?.(license.id)}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onExport?.([license.id])}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  Loading licenses...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : licenses.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  No licenses found
+                </TableCell>
+              </TableRow>
+            ) : (
+              licenses.map((license) => (
+                <TableRow
+                  key={license.id}
+                  className="border-grid hover:bg-card/50"
+                >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedRows.has(license.id)}
+                      onCheckedChange={() => toggleRowSelection(license.id)}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {license.firstName} {license.lastName}
+                    {license.businessName && (
+                      <div className="text-xs text-muted-foreground">{license.businessName}</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {license.licenseNumber}
+                  </TableCell>
+                  <TableCell>{license.state}</TableCell>
+                  <TableCell>
+                    <div>
+                      <div>{license.profession}</div>
+                      {license.specialty && (
+                        <div className="text-xs text-muted-foreground">
+                          {license.specialty}
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(license.status)}</TableCell>
+                  <TableCell className="w-48">
+                    <RenewalTimeline
+                      renewalDate={license.renewalDate}
+                      showLabel={false}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => router.push(`/dashboard/license/${license.id}`)}>
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExport([license.id])}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Export
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
@@ -226,13 +254,23 @@ export function LicenseTable({ onExport, onViewLicense }: LicenseTableProps) {
       {/* Pagination */}
       <div className="flex items-center justify-between px-4">
         <p className="text-sm text-muted-foreground">
-          Showing 1-{mockLicenses.length} of {mockLicenses.length} results
+          Showing {licenses.length > 0 ? 1 : 0}-{licenses.length} of {pagination.total} results
         </p>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            disabled={pagination.page <= 1}
+            onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+          >
             Previous
           </Button>
-          <Button variant="outline" size="sm" disabled>
+          <Button 
+            variant="outline" 
+            size="sm"
+            disabled={pagination.page >= pagination.totalPages}
+            onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+          >
             Next
           </Button>
         </div>

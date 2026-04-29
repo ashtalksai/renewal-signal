@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import Link from "next/link";
 
 export function Hero() {
@@ -17,6 +18,18 @@ export function Hero() {
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
               See who's renewing before your competitors know they exist. Government-fed license database updated daily from all 50 states.
             </p>
+          </div>
+
+          {/* Hero Image */}
+          <div className="w-full max-w-3xl mx-auto">
+            <Image
+              src="/hero-illustration.png"
+              alt="RenewalIQ Dashboard Preview"
+              width={1024}
+              height={768}
+              className="rounded-lg shadow-2xl border border-border"
+              priority
+            />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
