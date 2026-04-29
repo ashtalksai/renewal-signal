@@ -7,13 +7,8 @@ import { db } from "./db";
 import { users } from "./schema";
 import { eq } from "drizzle-orm";
 
-export const authConfig: NextAuthConfig = {
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-    Credentials({
+const providers: NextAuthConfig["providers"] = [
+  Credentials({
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -48,7 +43,20 @@ export const authConfig: NextAuthConfig = {
         };
       },
     }),
-  ],
+];
+
+// Add Google provider only if credentials are configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.unshift(
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  );
+}
+
+export const authConfig: NextAuthConfig = {
+  providers,
   pages: {
     signIn: "/login",
     signOut: "/login",
